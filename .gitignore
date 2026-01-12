@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environment
+cctv_env/
+
+# Data
+data/
+features/
+frames/
+raw_videos/
+
+# Model files
+*.pt
+*.pth
+
+# Logs
+alerts_log.txt
+
+# OS
+.DS_Store
+Thumbs.db
