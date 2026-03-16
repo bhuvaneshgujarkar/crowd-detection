@@ -1,7 +1,8 @@
+import torch
+torch.set_num_threads(4)
 import sys
 import os
 
-# Add project root to Python path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import torch
@@ -14,16 +15,10 @@ from torchvision.models import ResNet18_Weights
 
 from baseline_model.models.lstm_model import LSTMModel
 
-# -----------------------------
-# Load CNN (Feature Extractor)
-# -----------------------------
 resnet = models.resnet18(weights=ResNet18_Weights.DEFAULT)
-resnet.fc = torch.nn.Identity()   # 512-D features
+resnet.fc = torch.nn.Identity()   
 resnet.eval()
 
-# -----------------------------
-# Load LSTM
-# -----------------------------
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 MODEL_PATH = os.path.join(
@@ -37,15 +32,9 @@ lstm = LSTMModel()
 lstm.load_state_dict(torch.load(MODEL_PATH, map_location="cpu"))
 lstm.eval()
 
-# -----------------------------
-# Buffers (TEMP: one global buffer)
-# -----------------------------
 SEQ_LEN = 16
 frame_buffer = deque(maxlen=SEQ_LEN)
 
-# -----------------------------
-# Image Transform
-# -----------------------------
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
@@ -55,9 +44,6 @@ transform = transforms.Compose([
     )
 ])
 
-# -----------------------------
-# Inference Function
-# -----------------------------
 def process_frame(frame):
     img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
     img = transform(img).unsqueeze(0)

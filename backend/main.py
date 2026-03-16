@@ -2,59 +2,57 @@ from fastapi import FastAPI
 import cv2
 import base64
 import time
-import winsound
-from shared.detector import process_frame
+from shared.yolo_detector import detect_and_classify
+from shared.yolo_detector import last_label, last_conf
 
 app = FastAPI()
 
 cap = None
-last_alert_time = 0
 
 
+# -------- START VIDEO --------
 @app.post("/start")
 def start(video_path: str):
     global cap
-    cap = cv2.VideoCapture(video_path)
+
+    if video_path == "webcam":
+        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        time.sleep(2)
+    else:
+        cap = cv2.VideoCapture(video_path)
+
+    print("Camera opened:", cap.isOpened())
+
     return {"status": "started"}
 
 
+# -------- STREAM FRAME --------
 @app.get("/frame")
 def get_frame():
-    global cap, last_alert_time
+    global cap
 
-    if cap is None:
-        return {"status": "not_started"}
+    if cap is None or not cap.isOpened():
+        return {"status": "no_camera"}
 
     ret, frame = cap.read()
+
+    print("Frame read:", ret)
+
     if not ret:
-        return {"status": "ended"}
+        return {"status": "no_frame"}
 
-    result = process_frame(frame)
+    # -------- YOLO + VIOLENCE DETECTION --------
+    frame, person_count = detect_and_classify(frame)
 
-    label = result.get("label", "WARMING UP")
-    confidence = result.get("confidence", 0)
-
-    # Draw label
-    color = (0, 255, 0) if label == "NORMAL" else (0, 0, 255)
-    cv2.putText(frame, f"{label} {confidence:.2f}", (30, 50),
-                cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
-
-    # Alert system (limit beeps to once every 3 seconds)
-    if label == "VIOLENCE":
-        now = time.time()
-        if now - last_alert_time > 3:
-            winsound.Beep(1200, 600)
-            last_alert_time = now
-            with open("alerts_log.txt", "a") as f:
-                f.write(f"VIOLENCE detected at {time.ctime()}\n")
-
-    # Encode frame
+    # -------- ENCODE FRAME --------
     _, buffer = cv2.imencode(".jpg", frame)
     frame_base64 = base64.b64encode(buffer).decode("utf-8")
 
+    # -------- API RESPONSE --------
     return {
         "status": "ok",
-        "label": label,
-        "confidence": confidence,
-        "frame": frame_base64
+        "frame": frame_base64,
+        "person_count": person_count,
+        "label": last_label,
+        "confidence": last_conf
     }
