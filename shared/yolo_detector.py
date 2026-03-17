@@ -16,7 +16,7 @@ def detect_and_classify(frame):
     frame_count += 1
     person_count = 0   # NEW: count persons
 
-    results = yolo_model(frame, imgsz=320, conf=0.4, verbose=False)[0]
+    results = yolo_model(frame, imgsz=256, conf=0.5, verbose=False)[0]
 
     for box in results.boxes:
         cls = int(box.cls[0])
